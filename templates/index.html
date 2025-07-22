@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - CodeQuest{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Welcome Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="welcome-header">
+                <h1 class="display-4 text-primary">
+                    <i class="fas fa-rocket me-3"></i>Welcome to CodeQuest!
+                </h1>
+                <p class="lead">Master C programming through interactive challenges and visual coding.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-star fa-2x mb-2"></i>
+                    <h3>{{ user.total_score }}</h3>
+                    <p class="mb-0">Total Points</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h3>{{ user.completed_tasks }}</h3>
+                    <p class="mb-0">Tasks Completed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-tasks fa-2x mb-2"></i>
+                    <h3>{{ tasks|length }}</h3>
+                    <p class="mb-0">Total Tasks</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-trophy fa-2x mb-2"></i>
+                    <h3>{{ ((user.completed_tasks / tasks|length) * 100)|round|int }}%</h3>
+                    <p class="mb-0">Progress</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-chart-line me-2"></i>Overall Progress
+                    </h5>
+                    <div class="progress" style="height: 25px;">
+                        {% set progress_percent = ((user.completed_tasks / tasks|length) * 100)|round|int %}
+                        <div class="progress-bar bg-primary" role="progressbar" 
+                             style="width: {{ progress_percent }}%;" 
+                             aria-valuenow="{{ progress_percent }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ progress_percent }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Grid -->
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-list-ol me-2"></i>Learning Tasks
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for task in tasks %}
+        <div class="col-lg-6 mb-4">
+            <div class="card task-card h-100 {% if task_progress[task.id] and task_progress[task.id].completed %}completed{% endif %}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <span class="task-number">{{ task.order_index }}</span>
+                        {{ task.title }}
+                    </h5>
+                    <div class="task-badges">
+                        <span class="badge bg-secondary">{{ task.difficulty.title() }}</span>
+                        <span class="badge bg-warning">{{ task.points }} pts</span>
+                        {% if task_progress[task.id] and task_progress[task.id].completed %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-check"></i> Completed
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ task.description }}</p>
+                    
+                    {% if task_progress[task.id] and task_progress[task.id].attempts > 0 %}
+                    <div class="progress-info mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-history me-1"></i>
+                            Attempts: {{ task_progress[task.id].attempts }}
+                            {% if task_progress[task.id].completed %}
+                            | Score: {{ task_progress[task.id].score }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('task_detail', task_id=task.id) }}" 
+                           class="btn btn-primary flex-fill">
+                            <i class="fas fa-play me-1"></i>
+                            {% if task_progress[task.id] and task_progress[task.id].completed %}
+                                Review Task
+                            {% else %}
+                                Start Task
+                            {% endif %}
+                        </a>
+                        {% if task_progress[task.id] and task_progress[task.id].attempts > 0 %}
+                        <button class="btn btn-outline-secondary" 
+                                onclick="resetProgress({{ task.id }})"
+                                title="Reset Progress">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Getting Started Guide -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h4 class="card-title">
+                        <i class="fas fa-lightbulb me-2"></i>Getting Started
+                    </h4>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="feature-item">
+                                <i class="fas fa-cubes text-primary fa-2x mb-2"></i>
+                                <h6>Visual Blocks Mode</h6>
+                                <p class="small text-muted">Start with drag-and-drop programming blocks for beginners.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="feature-item">
+                                <i class="fas fa-code text-success fa-2x mb-2"></i>
+                                <h6>Text Editor Mode</h6>
+                                <p class="small text-muted">Advanced code editor with syntax highlighting and autocomplete.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="feature-item">
+                                <i class="fas fa-play-circle text-info fa-2x mb-2"></i>
+                                <h6>Instant Execution</h6>
+                                <p class="small text-muted">Run your code instantly and see results in real-time.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function resetProgress(taskId) {
+    if (confirm('Are you sure you want to reset your progress for this task?')) {
+        fetch(`/reset_progress/${taskId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error resetting progress: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error resetting progress');
+        });
+    }
+}
+</script>
+{% endblock %}

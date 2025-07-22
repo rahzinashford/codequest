@@ -1,0 +1,633 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} - CodeQuest{% endblock %}
+
+{% block extra_head %}
+<script src="https://d3js.org/d3.v7.min.js" onerror="loadD3Fallback()"></script>
+<script>
+let d3LoadAttempts = 0;
+const maxD3LoadAttempts = 3;
+
+function loadD3Fallback() {
+    d3LoadAttempts++;
+    console.log(`D3.js load attempt ${d3LoadAttempts} failed`);
+    
+    if (d3LoadAttempts < maxD3LoadAttempts) {
+        // Try alternative CDN
+        const script = document.createElement('script');
+        script.src = d3LoadAttempts === 1 
+            ? 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'
+            : 'https://unpkg.com/d3@7/dist/d3.min.js';
+        script.onerror = loadD3Fallback;
+        script.onload = function() {
+            console.log('D3.js loaded successfully from fallback CDN');
+            // Reinitialize flowchart if it exists
+            if (typeof initializeFlowchart === 'function') {
+                setTimeout(initializeFlowchart, 100);
+            }
+        };
+        document.head.appendChild(script);
+    } else {
+        console.error('All D3.js CDN attempts failed. Flowchart will be disabled.');
+        showD3ErrorInUI();
+    }
+}
+
+function showD3ErrorInUI() {
+    const flowchartContainer = document.getElementById('flowchart-container');
+    if (flowchartContainer) {
+        flowchartContainer.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center h-100">
+                <div class="text-center p-4">
+                    <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+                    <h5>Flowchart Temporarily Unavailable</h5>
+                    <p class="text-muted mb-3">Unable to load the flowchart library. This may be due to network connectivity.</p>
+                    <button class="btn btn-outline-primary" onclick="retryD3Loading()">
+                        <i class="fas fa-refresh me-1"></i>Try Again
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function retryD3Loading() {
+    d3LoadAttempts = 0;
+    const flowchartContainer = document.getElementById('flowchart-container');
+    if (flowchartContainer) {
+        flowchartContainer.innerHTML = '<div class="text-center p-4">Loading flowchart...</div>';
+    }
+    loadD3Fallback();
+}
+</script>
+<style>
+#editor {
+    height: 400px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+#terminal {
+    height: 200px;
+    background: #1e1e1e;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    padding: 15px;
+    border-radius: 8px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+.visual-blocks-container {
+    min-height: 400px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    background: #f8f9fa;
+}
+
+.code-block {
+    background: #18CB96;
+    color: white;
+    padding: 10px 15px;
+    margin: 5px;
+    border-radius: 8px;
+    cursor: grab;
+    display: inline-block;
+    font-family: 'Courier New', monospace;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.code-block:active {
+    cursor: grabbing;
+}
+
+.editable-block {
+    background: #FF6B6B !important;
+    border-left: 4px solid #FF5252;
+}
+
+.editable-block:hover {
+    background: #FF5252 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.dropped-block .btn {
+    font-size: 10px;
+    padding: 2px 6px;
+    margin-left: 8px;
+}
+
+.block-content {
+    flex-grow: 1;
+}
+
+.dropped-block {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal {
+    z-index: 1060;
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.drop-zone {
+    min-height: 50px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 5px 0;
+    background: white;
+    position: relative;
+}
+
+.drop-zone.drag-over {
+    border-color: #18CB96;
+    background: #f0fff4;
+}
+
+.drop-zone:empty::after {
+    content: "Drop code blocks here";
+    color: #999;
+    text-align: center;
+    display: block;
+    line-height: 30px;
+}
+
+/* Flowchart Styles */
+.flowchart-container {
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    min-height: 500px;
+    position: relative;
+}
+
+.flowchart-highlight {
+    border-color: #FF6B6B !important;
+    background: #fff5f5 !important;
+    animation: pulseHighlight 1s ease-in-out 3;
+}
+
+@keyframes pulseHighlight {
+    0%, 100% { 
+        border-color: #FF6B6B;
+        background: #fff5f5;
+    }
+    50% { 
+        border-color: #FF3333;
+        background: #ffe5e5;
+    }
+}
+
+.flowchart-mode-container {
+    display: none;
+}
+
+.flowchart-toggle {
+    margin-top: 10px;
+}
+
+.flowchart-tooltip {
+    max-width: 200px;
+    word-wrap: break-word;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Task Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="{{ url_for('index') }}">Dashboard</a>
+                            </li>
+                            <li class="breadcrumb-item active">{{ task.title }}</li>
+                        </ol>
+                    </nav>
+                    <h1>
+                        <span class="badge bg-primary me-2">{{ task.order_index }}</span>
+                        {{ task.title }}
+                        <span class="badge bg-warning ms-2">{{ task.points }} pts</span>
+                    </h1>
+                </div>
+                <div>
+                    {% if progress and progress.completed %}
+                    <span class="badge bg-success fs-6">
+                        <i class="fas fa-check me-1"></i>Completed
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Task Description Panel -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks me-2"></i>Task Description
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ task.description }}</p>
+
+                    <div class="mt-4">
+                        <h6><i class="fas fa-bullseye me-2"></i>Expected Output:</h6>
+                        <div class="bg-light p-3 rounded">
+                            <code>{{ task.expected_output }}</code>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button class="btn btn-outline-info btn-sm" onclick="getHint()">
+                            <i class="fas fa-lightbulb me-1"></i>Get Hint
+                        </button>
+                        <div id="hint-container" class="mt-2" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <span id="hint-text"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if progress %}
+                    <div class="mt-4">
+                        <h6>Your Progress:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-history me-2"></i>Attempts: {{ progress.attempts }}</li>
+                            {% if progress.completed %}
+                            <li><i class="fas fa-trophy me-2"></i>Score: {{ progress.score }}</li>
+                            <li><i class="fas fa-calendar me-2"></i>Completed: {{ progress.completed_at.strftime('%Y-%m-%d %H:%M') }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Coding Interface -->
+        <div class="col-lg-8">
+            <!-- Mode Selector -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-code me-2"></i>Coding Interface
+                        </h5>
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="codeMode" id="visualMode" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="visualMode">
+                                <i class="fas fa-cubes me-1"></i>Visual Blocks
+                            </label>
+
+                            <input type="radio" class="btn-check" name="codeMode" id="flowchartMode" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="flowchartMode">
+                                <i class="fas fa-project-diagram me-1"></i>Flowchart
+                            </label>
+
+                            <input type="radio" class="btn-check" name="codeMode" id="textMode" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="textMode">
+                                <i class="fas fa-code me-1"></i>Text Editor
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Blocks Mode -->
+            <div id="visual-mode-container" class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Drag and Drop Code Blocks</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Available Blocks -->
+                    <div class="mb-3">
+                        <h6>Available Blocks:</h6>
+                        <div id="blocks-palette">
+                            <!-- Fixed blocks -->
+                            <div class="code-block" draggable="true" data-code='#include <stdio.h>'>
+                                #include &lt;stdio.h&gt;
+                            </div>
+                            <div class="code-block" draggable="true" data-code='int main() {'>
+                                int main() {
+                            </div>
+                            <div class="code-block" draggable="true" data-code='return 0;'>
+                                return 0;
+                            </div>
+                            <div class="code-block" draggable="true" data-code='}'>
+                                }
+                            </div>
+
+                            <!-- Editable blocks -->
+                            <div class="code-block editable-block" draggable="true" 
+                                 data-code='printf("Hello, World!");' data-block-type='printf'>
+                                <i class="fas fa-edit me-1"></i>printf("...")
+                            </div>
+                            <div class="code-block editable-block" draggable="true" 
+                                 data-code='scanf("%d", &number);' data-block-type='scanf'>
+                                <i class="fas fa-edit me-1"></i>scanf("...", &...)
+                            </div>
+                            <div class="code-block editable-block" draggable="true" 
+                                 data-code='int number;' data-block-type='variable'>
+                                <i class="fas fa-edit me-1"></i>variable declaration
+                            </div>
+                            <div class="code-block editable-block" draggable="true" 
+                                 data-code='if (number % 2 == 0) {' data-block-type='if'>
+                                <i class="fas fa-edit me-1"></i>if (...) {
+                            </div>
+                            <div class="code-block editable-block" draggable="true" 
+                                 data-code='for (int i = 0; i < n; i++) {' data-block-type='for'>
+                                <i class="fas fa-edit me-1"></i>for (...; ...; ...) {
+                            </div>
+                            <div class="code-block editable-block" draggable="true" 
+                                 data-code='while (condition) {' data-block-type='while'>
+                                <i class="fas fa-edit me-1"></i>while (...) {
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Drop Zones -->
+                    <div class="visual-blocks-container">
+                        <h6>Build Your Program:</h6>
+                        <div id="program-builder">
+                            <div class="drop-zone" data-line="1"></div>
+                            <div class="drop-zone" data-line="2"></div>
+                            <div class="drop-zone" data-line="3"></div>
+                            <div class="drop-zone" data-line="4"></div>
+                            <div class="drop-zone" data-line="5"></div>
+                            <div class="drop-zone" data-line="6"></div>
+                            <div class="drop-zone" data-line="7"></div>
+                            <div class="drop-zone" data-line="8"></div>
+                        </div>
+                        <button class="btn btn-secondary mt-3" onclick="clearVisualBlocks()">
+                            <i class="fas fa-trash me-1"></i>Clear All
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flowchart Mode -->
+            <div id="flowchart-mode-container" class="card mb-3" style="display: none;">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-project-diagram me-2"></i>Program Flowchart
+                        </h6>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="syncFlowchartWithBlocks()">
+                            <i class="fas fa-sync me-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This flowchart shows the logical flow of your program. Click on nodes to highlight corresponding code blocks.
+                        The flowchart updates automatically as you build your program with visual blocks.
+                    </div>
+                    <div id="flowchart-container" class="flowchart-container"></div>
+                </div>
+            </div>
+
+            <!-- Text Editor Mode -->
+            <div id="text-mode-container" class="card mb-3" style="display: none;">
+                <div class="card-header">
+                    <h6 class="mb-0">Code Editor</h6>
+                </div>
+                <div class="card-body">
+                    <div id="editor">{{ current_code }}</div>
+                </div>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success" onclick="runCode()">
+                            <i class="fas fa-play me-1"></i>Run Code
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="resetCode()">
+                            <i class="fas fa-undo me-1"></i>Reset
+                        </button>
+                        <button class="btn btn-outline-info" onclick="generateFromBlocks()">
+                            <i class="fas fa-magic me-1"></i>Convert Blocks to Code
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terminal Output -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-terminal me-2"></i>Output Terminal
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div id="terminal">Click "Run Code" to see output...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/code-editor.js') }}"></script>
+<script src="{{ url_for('static', filename='js/visual-blocks.js') }}"></script>
+<script src="{{ url_for('static', filename='js/flowchart.js') }}"></script>
+<script>
+let currentTask = {{ task.id }};
+let editor;
+
+// Initialize Monaco Editor with error handling
+function initMonacoEditor() {
+    if (typeof require === 'undefined') {
+        console.error('Monaco editor loader not available');
+        return;
+    }
+
+    require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
+    require(['vs/editor/editor.main'], function() {
+        try {
+            const editorContainer = document.getElementById('editor');
+            if (!editorContainer) {
+                console.error('Editor container not found');
+                return;
+            }
+
+            editor = monaco.editor.create(editorContainer, {
+                value: {{ current_code | tojson }},
+                language: 'c',
+                theme: 'vs',
+                automaticLayout: true,
+                fontSize: 14,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                lineNumbers: 'on',
+                folding: true
+            });
+
+            console.log('Monaco editor initialized successfully');
+        } catch (error) {
+            console.error('Error initializing Monaco editor:', error);
+        }
+    });
+}
+
+// Initialize editor when page is ready
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(initMonacoEditor, 500); // Small delay to ensure DOM is ready
+});
+
+// Mode switching
+document.querySelectorAll('input[name="codeMode"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        // Hide all containers
+        document.getElementById('visual-mode-container').style.display = 'none';
+        document.getElementById('flowchart-mode-container').style.display = 'none';
+        document.getElementById('text-mode-container').style.display = 'none';
+
+        // Show selected container
+        if (this.id === 'visualMode') {
+            document.getElementById('visual-mode-container').style.display = 'block';
+        } else if (this.id === 'flowchartMode') {
+            document.getElementById('flowchart-mode-container').style.display = 'block';
+            // Update flowchart when switching to it
+            setTimeout(() => {
+                if (typeof updateFlowchart === 'function') {
+                    updateFlowchart();
+                }
+            }, 100);
+        } else {
+            document.getElementById('text-mode-container').style.display = 'block';
+            updateTextEditor();
+        }
+    });
+});
+
+function runCode() {
+    const terminal = document.getElementById('terminal');
+    terminal.textContent = 'Compiling and running...';
+
+    let code;
+    if (document.getElementById('visualMode').checked) {
+        code = generateCodeFromBlocks();
+        if (!code.trim()) {
+            terminal.textContent = 'Error: No code blocks arranged. Please drag blocks to build your program.';
+            return;
+        }
+    } else {
+        code = editor ? editor.getValue() : '';
+        if (!code.trim()) {
+            terminal.textContent = 'Error: No code provided. Please write some code first.';
+            return;
+        }
+    }
+
+    fetch('/execute_code', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            code: code,
+            task_id: currentTask
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            terminal.textContent = `Error: ${data.error}`;
+        } else {
+            terminal.textContent = data.output || 'Program executed successfully';
+            if (data.success) {
+                showSuccessMessage(data.message);
+            }
+        }
+        terminal.textContent += `\n\nExecution time: ${data.execution_time}s`;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        terminal.textContent = 'Error executing code';
+    });
+}
+
+function resetCode() {
+    if (editor) {
+        editor.setValue({{ task.starter_code | tojson }});
+    }
+    clearVisualBlocks();
+    document.getElementById('terminal').textContent = 'Click "Run Code" to see output...';
+}
+
+function getHint() {
+    fetch(`/get_hint/{{ task.id }}`)
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('hint-text').textContent = data.hint;
+        document.getElementById('hint-container').style.display = 'block';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function showSuccessMessage(message) {
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    alert.style.top = '20px';
+    alert.style.right = '20px';
+    alert.style.zIndex = '9999';
+    alert.innerHTML = `
+        <i class="fas fa-trophy me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alert);
+
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.parentNode.removeChild(alert);
+        }
+    }, 5000);
+}
+
+function generateFromBlocks() {
+    const code = generateCodeFromBlocks();
+    if (editor) {
+        editor.setValue(code);
+    }
+    document.getElementById('textMode').checked = true;
+    document.getElementById('visual-mode-container').style.display = 'none';
+    document.getElementById('text-mode-container').style.display = 'block';
+}
+
+// Note: Mode switching listeners are already defined above, avoiding duplicates
+</script>
+{% endblock %}
