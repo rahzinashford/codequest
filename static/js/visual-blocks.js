@@ -9,6 +9,7 @@ const blockTemplates = {
     'printf': {
         template: 'printf("${text}");',
         display: 'printf("...")',
+        category: 'io',
         editableFields: [
             { name: 'text', type: 'text', placeholder: 'Hello, World!', default: 'Hello, World!' }
         ]
@@ -16,29 +17,67 @@ const blockTemplates = {
     'scanf': {
         template: 'scanf("${format}", &${variable});',
         display: 'scanf("...", &...)',
+        category: 'io',
         editableFields: [
             { name: 'format', type: 'text', placeholder: '%d', default: '%d' },
             { name: 'variable', type: 'text', placeholder: 'number', default: 'number' }
         ]
     },
     'variable': {
-        template: '${type} ${name};',
-        display: '... ...;',
+        template: '${type} ${name} = ${value};',
+        display: 'variable declaration',
+        category: 'variables',
+        editableFields: [
+            { name: 'type', type: 'select', options: ['int', 'float', 'char', 'double', 'long', 'short'], default: 'int' },
+            { name: 'name', type: 'text', placeholder: 'variable', default: 'number' },
+            { name: 'value', type: 'text', placeholder: '0', default: '0' }
+        ]
+    },
+    'assign': {
+        template: '${variable} = ${value};',
+        display: 'assignment',
+        category: 'variables',
+        editableFields: [
+            { name: 'variable', type: 'text', placeholder: 'variable', default: 'number' },
+            { name: 'value', type: 'text', placeholder: 'value', default: '42' }
+        ]
+    },
+    'array': {
+        template: '${type} ${name}[${size}];',
+        display: 'array declaration',
+        category: 'variables',
         editableFields: [
             { name: 'type', type: 'select', options: ['int', 'float', 'char', 'double'], default: 'int' },
-            { name: 'name', type: 'text', placeholder: 'variable', default: 'number' }
+            { name: 'name', type: 'text', placeholder: 'array', default: 'numbers' },
+            { name: 'size', type: 'text', placeholder: '10', default: '10' }
         ]
     },
     'if': {
         template: 'if (${condition}) {',
         display: 'if (...) {',
+        category: 'control',
         editableFields: [
             { name: 'condition', type: 'text', placeholder: 'number % 2 == 0', default: 'number % 2 == 0' }
+        ]
+    },
+    'else': {
+        template: 'else {',
+        display: 'else {',
+        category: 'control',
+        editableFields: []
+    },
+    'elseif': {
+        template: 'else if (${condition}) {',
+        display: 'else if (...) {',
+        category: 'control',
+        editableFields: [
+            { name: 'condition', type: 'text', placeholder: 'condition', default: 'number > 0' }
         ]
     },
     'for': {
         template: 'for (${init}; ${condition}; ${update}) {',
         display: 'for (...; ...; ...) {',
+        category: 'loops',
         editableFields: [
             { name: 'init', type: 'text', placeholder: 'int i = 0', default: 'int i = 0' },
             { name: 'condition', type: 'text', placeholder: 'i < n', default: 'i < n' },
@@ -48,8 +87,134 @@ const blockTemplates = {
     'while': {
         template: 'while (${condition}) {',
         display: 'while (...) {',
+        category: 'loops',
         editableFields: [
-            { name: 'condition', type: 'text', placeholder: 'condition', default: 'condition' }
+            { name: 'condition', type: 'text', placeholder: 'condition', default: 'i < 10' }
+        ]
+    },
+    'dowhile': {
+        template: 'do {',
+        display: 'do {',
+        category: 'loops',
+        editableFields: []
+    },
+    'whileend': {
+        template: '} while (${condition});',
+        display: '} while (...);',
+        category: 'loops',
+        editableFields: [
+            { name: 'condition', type: 'text', placeholder: 'condition', default: 'i < 10' }
+        ]
+    },
+    'break': {
+        template: 'break;',
+        display: 'break;',
+        category: 'control',
+        editableFields: []
+    },
+    'continue': {
+        template: 'continue;',
+        display: 'continue;',
+        category: 'control',
+        editableFields: []
+    },
+    'function': {
+        template: '${returnType} ${name}(${parameters}) {',
+        display: 'function declaration',
+        category: 'functions',
+        editableFields: [
+            { name: 'returnType', type: 'select', options: ['void', 'int', 'float', 'char', 'double'], default: 'int' },
+            { name: 'name', type: 'text', placeholder: 'functionName', default: 'calculate' },
+            { name: 'parameters', type: 'text', placeholder: 'int a, int b', default: 'int x, int y' }
+        ]
+    },
+    'return': {
+        template: 'return ${value};',
+        display: 'return ...',
+        category: 'functions',
+        editableFields: [
+            { name: 'value', type: 'text', placeholder: 'value', default: '0' }
+        ]
+    },
+    'switch': {
+        template: 'switch (${variable}) {',
+        display: 'switch (...) {',
+        category: 'control',
+        editableFields: [
+            { name: 'variable', type: 'text', placeholder: 'variable', default: 'choice' }
+        ]
+    },
+    'case': {
+        template: 'case ${value}:',
+        display: 'case ...:',
+        category: 'control',
+        editableFields: [
+            { name: 'value', type: 'text', placeholder: '1', default: '1' }
+        ]
+    },
+    'default': {
+        template: 'default:',
+        display: 'default:',
+        category: 'control',
+        editableFields: []
+    },
+    'comment': {
+        template: '// ${text}',
+        display: '// comment',
+        category: 'misc',
+        editableFields: [
+            { name: 'text', type: 'text', placeholder: 'Comment text', default: 'This is a comment' }
+        ]
+    },
+    'multicomment': {
+        template: '/* ${text} */',
+        display: '/* comment */',
+        category: 'misc',
+        editableFields: [
+            { name: 'text', type: 'text', placeholder: 'Comment text', default: 'Multi-line comment' }
+        ]
+    },
+    'define': {
+        template: '#define ${name} ${value}',
+        display: '#define ...',
+        category: 'preprocessor',
+        editableFields: [
+            { name: 'name', type: 'text', placeholder: 'CONSTANT', default: 'MAX_SIZE' },
+            { name: 'value', type: 'text', placeholder: '100', default: '100' }
+        ]
+    },
+    'include': {
+        template: '#include <${header}>',
+        display: '#include <...>',
+        category: 'preprocessor',
+        editableFields: [
+            { name: 'header', type: 'select', options: ['stdio.h', 'stdlib.h', 'string.h', 'math.h', 'time.h', 'ctype.h'], default: 'stdio.h' }
+        ]
+    },
+    'sizeof': {
+        template: 'sizeof(${type})',
+        display: 'sizeof(...)',
+        category: 'operators',
+        editableFields: [
+            { name: 'type', type: 'text', placeholder: 'int', default: 'int' }
+        ]
+    },
+    'malloc': {
+        template: '${variable} = (${type}*)malloc(${size} * sizeof(${type}));',
+        display: 'malloc(...)',
+        category: 'memory',
+        editableFields: [
+            { name: 'variable', type: 'text', placeholder: 'ptr', default: 'ptr' },
+            { name: 'type', type: 'select', options: ['int', 'float', 'char', 'double'], default: 'int' },
+            { name: 'size', type: 'text', placeholder: '10', default: '10' }
+        ]
+    },
+    'free': {
+        template: 'free(${variable});',
+        display: 'free(...)',
+        category: 'memory',
+        editableFields: [
+            { name: 'variable', type: 'text', placeholder: 'ptr', default: 'ptr' }
         ]
     }
 };
@@ -58,6 +223,8 @@ const blockTemplates = {
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('blocks-palette')) {
         initializeVisualBlocks();
+        setupBlockFiltering();
+        addSearchFunctionality();
     }
 });
 
@@ -455,17 +622,31 @@ function updateProgramStructure() {
             programBlocks.push({
                 line: index + 1,
                 code: block.getAttribute('data-code'),
-                text: block.textContent.replace('×', '').trim()
+                text: block.textContent.replace('×', '').replace(/\s*Edit\s*/, '').trim(),
+                blockType: block.getAttribute('data-block-type'),
+                blockData: block.getAttribute('data-block-data')
             });
         }
     });
     
     console.log('Program structure updated:', programBlocks);
     
-    // Dispatch event for flowchart sync
+    // Enhanced event dispatch with more context
     document.dispatchEvent(new CustomEvent('programStructureUpdated', {
-        detail: { blocks: programBlocks }
+        detail: { 
+            blocks: programBlocks,
+            timestamp: Date.now(),
+            totalBlocks: programBlocks.length
+        }
     }));
+    
+    // Trigger flowchart update with debouncing
+    clearTimeout(window.flowchartUpdateTimeout);
+    window.flowchartUpdateTimeout = setTimeout(() => {
+        if (typeof updateFlowchart === 'function') {
+            updateFlowchart();
+        }
+    }, 100);
 }
 
 function generateCodeFromBlocks() {
@@ -736,6 +917,245 @@ function showValidationErrors(errors) {
     }
 }
 
+// Block category filtering
+function setupBlockFiltering() {
+    const categoryRadios = document.querySelectorAll('input[name="blockCategory"]');
+    categoryRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            filterBlocksByCategory(this.id);
+        });
+    });
+}
+
+function filterBlocksByCategory(selectedCategory) {
+    const categories = document.querySelectorAll('.block-category');
+    const blocks = document.querySelectorAll('#blocks-palette .code-block');
+    
+    if (selectedCategory === 'allBlocks') {
+        categories.forEach(cat => cat.style.display = 'block');
+        blocks.forEach(block => block.style.display = 'inline-block');
+    } else {
+        const categoryMap = {
+            'basicBlocks': ['basic'],
+            'ioBlocks': ['io'],
+            'controlBlocks': ['control'],
+            'loopBlocks': ['loops'],
+            'advancedBlocks': ['functions', 'preprocessor', 'misc', 'memory', 'variables', 'operators']
+        };
+        
+        const allowedCategories = categoryMap[selectedCategory] || [];
+        
+        categories.forEach(cat => {
+            const categoryName = cat.getAttribute('data-category');
+            if (allowedCategories.includes(categoryName)) {
+                cat.style.display = 'block';
+            } else {
+                cat.style.display = 'none';
+            }
+        });
+        
+        // Also show blocks that don't have categories (basic blocks)
+        blocks.forEach(block => {
+            const category = block.closest('.block-category');
+            if (!category) {
+                block.style.display = allowedCategories.includes('basic') ? 'inline-block' : 'none';
+            }
+        });
+    }
+}
+
+// Add search functionality
+function addSearchFunctionality() {
+    const palette = document.getElementById('blocks-palette');
+    const searchContainer = document.createElement('div');
+    searchContainer.className = 'mb-2';
+    searchContainer.innerHTML = `
+        <div class="input-group input-group-sm">
+            <span class="input-group-text">
+                <i class="fas fa-search"></i>
+            </span>
+            <input type="text" class="form-control" id="blockSearch" placeholder="Search blocks...">
+            <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    palette.parentNode.insertBefore(searchContainer, palette);
+    
+    const searchInput = document.getElementById('blockSearch');
+    searchInput.addEventListener('input', function() {
+        searchBlocks(this.value);
+    });
+}
+
+function searchBlocks(searchTerm) {
+    const blocks = document.querySelectorAll('#blocks-palette .code-block');
+    const term = searchTerm.toLowerCase();
+    
+    blocks.forEach(block => {
+        const blockText = block.textContent.toLowerCase();
+        const blockType = block.getAttribute('data-block-type') || '';
+        const blockCode = block.getAttribute('data-code') || '';
+        
+        if (blockText.includes(term) || blockType.includes(term) || blockCode.toLowerCase().includes(term)) {
+            block.style.display = 'inline-block';
+        } else {
+            block.style.display = 'none';
+        }
+    });
+}
+
+function clearSearch() {
+    const searchInput = document.getElementById('blockSearch');
+    searchInput.value = '';
+    searchBlocks('');
+}
+
+// Enhanced auto-suggestion system with more patterns
+function suggestNextBlock() {
+    const lastBlock = programBlocks[programBlocks.length - 1];
+    if (!lastBlock) return ['#include <stdio.h>', 'int main() {'];
+    
+    const suggestions = {
+        '#include <stdio.h>': ['int main() {', '#include <stdlib.h>', '#define MAX_SIZE 100'],
+        'int main() {': ['printf("Hello, World!");', 'int number = 0;', 'scanf("%d", &number);'],
+        'printf("Hello, World!");': ['return 0;', 'scanf("%d", &number);'],
+        'int number = 0;': ['scanf("%d", &number);', 'printf("%d", number);'],
+        'scanf("%d", &number);': ['if (number % 2 == 0) {', 'printf("%d", number);', 'while (number > 0) {'],
+        'if (number % 2 == 0) {': ['printf("Even");', 'printf("%d is even", number);', '}'],
+        'else {': ['printf("Odd");', 'printf("%d is odd", number);'],
+        'for (int i = 0; i < n; i++) {': ['printf("%d\\n", i);', 'scanf("%d", &number);', '}'],
+        'while (i < 10) {': ['printf("%d ", i);', 'i++;', '}'],
+        'switch (choice) {': ['case 1:', 'default:', '}'],
+        'case 1:': ['printf("Option 1");', 'break;'],
+        'break;': ['case 2:', 'default:', '}'],
+        'default:': ['printf("Invalid option");', 'break;'],
+        'return 0;': ['}'],
+        '// This is a comment': ['int number = 0;', 'printf("Hello, World!");']
+    };
+    
+    return suggestions[lastBlock.code] || null;
+}
+
+// Block validation with more comprehensive checks
+function validateBlockSequence() {
+    const errors = [];
+    let hasInclude = false;
+    let hasMain = false;
+    let braceCount = 0;
+    let parenCount = 0;
+    let inSwitch = false;
+    let hasReturn = false;
+    
+    programBlocks.forEach((block, index) => {
+        const code = block.code;
+        
+        // Check for includes
+        if (code.includes('#include')) {
+            hasInclude = true;
+        }
+        
+        // Check for main function
+        if (code.includes('int main()') || code.includes('void main()')) {
+            hasMain = true;
+        }
+        
+        // Check for return statement
+        if (code.includes('return')) {
+            hasReturn = true;
+        }
+        
+        // Count braces
+        if (code.includes('{')) {
+            braceCount++;
+        }
+        
+        if (code === '}') {
+            braceCount--;
+            if (inSwitch && code === '}') {
+                inSwitch = false;
+            }
+        }
+        
+        // Check switch statements
+        if (code.includes('switch')) {
+            inSwitch = true;
+        }
+        
+        // Check for break in switch
+        if (inSwitch && code.includes('case') && index < programBlocks.length - 1) {
+            const nextBlock = programBlocks[index + 1];
+            if (nextBlock && !nextBlock.code.includes('break') && !nextBlock.code.includes('return')) {
+                // Look ahead for break
+                let foundBreak = false;
+                for (let i = index + 1; i < programBlocks.length && i < index + 3; i++) {
+                    if (programBlocks[i].code.includes('break') || programBlocks[i].code.includes('return')) {
+                        foundBreak = true;
+                        break;
+                    }
+                }
+                if (!foundBreak) {
+                    errors.push(`Missing 'break;' after case at line ${index + 1}`);
+                }
+            }
+        }
+        
+        // Check for semicolons
+        if (!code.includes('#') && !code.includes('//') && !code.includes('/*') && 
+            !code.endsWith('{') && !code.endsWith('}') && !code.endsWith(':') &&
+            !code.endsWith(';') && code.trim().length > 0) {
+            errors.push(`Missing semicolon at line ${index + 1}`);
+        }
+    });
+    
+    if (!hasInclude) {
+        errors.push('Missing #include <stdio.h> directive');
+    }
+    
+    if (!hasMain) {
+        errors.push('Missing main() function');
+    }
+    
+    if (hasMain && !hasReturn) {
+        errors.push('Main function should have a return statement');
+    }
+    
+    if (braceCount !== 0) {
+        errors.push(`Mismatched braces: ${braceCount > 0 ? 'missing closing' : 'extra closing'} brace(s)`);
+    }
+    
+    return errors;
+}
+
+// Advanced code analysis
+function analyzeCodeComplexity() {
+    let complexity = 0;
+    let lines = 0;
+    
+    programBlocks.forEach(block => {
+        lines++;
+        const code = block.code;
+        
+        // Increase complexity for control structures
+        if (code.includes('if') || code.includes('while') || code.includes('for') || 
+            code.includes('switch') || code.includes('case')) {
+            complexity++;
+        }
+        
+        // Nested structures increase complexity more
+        if (code.includes('else if')) {
+            complexity += 0.5;
+        }
+    });
+    
+    return {
+        complexity: Math.round(complexity * 10) / 10,
+        lines: lines,
+        difficulty: complexity < 2 ? 'Beginner' : complexity < 5 ? 'Intermediate' : 'Advanced'
+    };
+}
+
 // Export functions for use in task.html
 window.generateCodeFromBlocks = generateCodeFromBlocks;
 window.clearVisualBlocks = clearVisualBlocks;
@@ -743,3 +1163,7 @@ window.removeBlock = removeBlock;
 window.selectBlock = selectBlock;
 window.cancelBlockSelection = cancelBlockSelection;
 window.applySuggestion = applySuggestion;
+window.filterBlocksByCategory = filterBlocksByCategory;
+window.searchBlocks = searchBlocks;
+window.clearSearch = clearSearch;
+window.analyzeCodeComplexity = analyzeCodeComplexity;

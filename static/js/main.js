@@ -321,3 +321,43 @@ window.CodeQuest = CodeQuest;
 window.showNotification = showNotification;
 window.animateScore = animateScore;
 window.updateProgress = updateProgress;
+
+// Enhanced flowchart integration
+function dispatchFlowchartEvent(eventName, data = {}) {
+    document.dispatchEvent(new CustomEvent(eventName, { detail: data }));
+}
+
+// Listen for flowchart events
+document.addEventListener('flowchartNodeClicked', function(event) {
+    const { blockIndex } = event.detail;
+    console.log('Flowchart node clicked, highlighting block:', blockIndex);
+    
+    // Scroll to and highlight the corresponding code block
+    const dropZones = document.querySelectorAll('.drop-zone');
+    if (dropZones[blockIndex]) {
+        dropZones[blockIndex].scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+        });
+    }
+});
+
+// Enhanced code execution events
+window.originalRunCode = window.runCode;
+window.runCode = function() {
+    dispatchFlowchartEvent('codeExecutionStarted');
+    
+    if (window.originalRunCode) {
+        const result = window.originalRunCode();
+        
+        // Dispatch execution result after a delay to show the result
+        setTimeout(() => {
+            dispatchFlowchartEvent('codeExecutionResult', { 
+                success: true,
+                timestamp: Date.now()
+            });
+        }, 500);
+        
+        return result;
+    }
+};

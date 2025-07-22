@@ -3,63 +3,7 @@
 {% block title %}{{ task.title }} - CodeQuest{% endblock %}
 
 {% block extra_head %}
-<script src="https://d3js.org/d3.v7.min.js" onerror="loadD3Fallback()"></script>
-<script>
-let d3LoadAttempts = 0;
-const maxD3LoadAttempts = 3;
-
-function loadD3Fallback() {
-    d3LoadAttempts++;
-    console.log(`D3.js load attempt ${d3LoadAttempts} failed`);
-    
-    if (d3LoadAttempts < maxD3LoadAttempts) {
-        // Try alternative CDN
-        const script = document.createElement('script');
-        script.src = d3LoadAttempts === 1 
-            ? 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'
-            : 'https://unpkg.com/d3@7/dist/d3.min.js';
-        script.onerror = loadD3Fallback;
-        script.onload = function() {
-            console.log('D3.js loaded successfully from fallback CDN');
-            // Reinitialize flowchart if it exists
-            if (typeof initializeFlowchart === 'function') {
-                setTimeout(initializeFlowchart, 100);
-            }
-        };
-        document.head.appendChild(script);
-    } else {
-        console.error('All D3.js CDN attempts failed. Flowchart will be disabled.');
-        showD3ErrorInUI();
-    }
-}
-
-function showD3ErrorInUI() {
-    const flowchartContainer = document.getElementById('flowchart-container');
-    if (flowchartContainer) {
-        flowchartContainer.innerHTML = `
-            <div class="d-flex align-items-center justify-content-center h-100">
-                <div class="text-center p-4">
-                    <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
-                    <h5>Flowchart Temporarily Unavailable</h5>
-                    <p class="text-muted mb-3">Unable to load the flowchart library. This may be due to network connectivity.</p>
-                    <button class="btn btn-outline-primary" onclick="retryD3Loading()">
-                        <i class="fas fa-refresh me-1"></i>Try Again
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-}
-
-function retryD3Loading() {
-    d3LoadAttempts = 0;
-    const flowchartContainer = document.getElementById('flowchart-container');
-    if (flowchartContainer) {
-        flowchartContainer.innerHTML = '<div class="text-center p-4">Loading flowchart...</div>';
-    }
-    loadD3Fallback();
-}
-</script>
+<!-- No external dependencies needed for Canvas-based flowchart -->
 <style>
 #editor {
     height: 400px;
@@ -328,46 +272,179 @@ function retryD3Loading() {
                 <div class="card-body">
                     <!-- Available Blocks -->
                     <div class="mb-3">
-                        <h6>Available Blocks:</h6>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6>Available Blocks:</h6>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <input type="radio" class="btn-check" name="blockCategory" id="allBlocks" autocomplete="off" checked>
+                                <label class="btn btn-outline-secondary" for="allBlocks">All</label>
+                                
+                                <input type="radio" class="btn-check" name="blockCategory" id="basicBlocks" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="basicBlocks">Basic</label>
+                                
+                                <input type="radio" class="btn-check" name="blockCategory" id="ioBlocks" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="ioBlocks">I/O</label>
+                                
+                                <input type="radio" class="btn-check" name="blockCategory" id="controlBlocks" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="controlBlocks">Control</label>
+                                
+                                <input type="radio" class="btn-check" name="blockCategory" id="loopBlocks" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="loopBlocks">Loops</label>
+                                
+                                <input type="radio" class="btn-check" name="blockCategory" id="advancedBlocks" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="advancedBlocks">Advanced</label>
+                            </div>
+                        </div>
                         <div id="blocks-palette">
-                            <!-- Fixed blocks -->
-                            <div class="code-block" draggable="true" data-code='#include <stdio.h>'>
-                                #include &lt;stdio.h&gt;
-                            </div>
-                            <div class="code-block" draggable="true" data-code='int main() {'>
-                                int main() {
-                            </div>
-                            <div class="code-block" draggable="true" data-code='return 0;'>
-                                return 0;
-                            </div>
-                            <div class="code-block" draggable="true" data-code='}'>
-                                }
+                            <!-- Basic Structure Blocks -->
+                            <div class="block-category" data-category="basic">
+                                <div class="code-block" draggable="true" data-code='#include <stdio.h>'>
+                                    #include &lt;stdio.h&gt;
+                                </div>
+                                <div class="code-block" draggable="true" data-code='int main() {'>
+                                    int main() {
+                                </div>
+                                <div class="code-block" draggable="true" data-code='return 0;'>
+                                    return 0;
+                                </div>
+                                <div class="code-block" draggable="true" data-code='}'>
+                                    }
+                                </div>
                             </div>
 
-                            <!-- Editable blocks -->
-                            <div class="code-block editable-block" draggable="true" 
-                                 data-code='printf("Hello, World!");' data-block-type='printf'>
-                                <i class="fas fa-edit me-1"></i>printf("...")
+                            <!-- I/O Blocks -->
+                            <div class="block-category" data-category="io">
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='printf("Hello, World!");' data-block-type='printf'>
+                                    <i class="fas fa-edit me-1"></i>printf("...")
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='scanf("%d", &number);' data-block-type='scanf'>
+                                    <i class="fas fa-edit me-1"></i>scanf("...", &...)
+                                </div>
                             </div>
-                            <div class="code-block editable-block" draggable="true" 
-                                 data-code='scanf("%d", &number);' data-block-type='scanf'>
-                                <i class="fas fa-edit me-1"></i>scanf("...", &...)
+
+                            <!-- Variable Blocks -->
+                            <div class="block-category" data-category="variables">
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='int number = 0;' data-block-type='variable'>
+                                    <i class="fas fa-edit me-1"></i>variable declaration
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='number = 42;' data-block-type='assign'>
+                                    <i class="fas fa-edit me-1"></i>assignment
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='int numbers[10];' data-block-type='array'>
+                                    <i class="fas fa-edit me-1"></i>array declaration
+                                </div>
                             </div>
-                            <div class="code-block editable-block" draggable="true" 
-                                 data-code='int number;' data-block-type='variable'>
-                                <i class="fas fa-edit me-1"></i>variable declaration
+
+                            <!-- Control Flow Blocks -->
+                            <div class="block-category" data-category="control">
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='if (number % 2 == 0) {' data-block-type='if'>
+                                    <i class="fas fa-edit me-1"></i>if (...) {
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='else {' data-block-type='else'>
+                                    <i class="fas fa-edit me-1"></i>else {
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='else if (number > 0) {' data-block-type='elseif'>
+                                    <i class="fas fa-edit me-1"></i>else if (...) {
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='switch (choice) {' data-block-type='switch'>
+                                    <i class="fas fa-edit me-1"></i>switch (...) {
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='case 1:' data-block-type='case'>
+                                    <i class="fas fa-edit me-1"></i>case ...:
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='default:' data-block-type='default'>
+                                    <i class="fas fa-edit me-1"></i>default:
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='break;' data-block-type='break'>
+                                    <i class="fas fa-edit me-1"></i>break;
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='continue;' data-block-type='continue'>
+                                    <i class="fas fa-edit me-1"></i>continue;
+                                </div>
                             </div>
-                            <div class="code-block editable-block" draggable="true" 
-                                 data-code='if (number % 2 == 0) {' data-block-type='if'>
-                                <i class="fas fa-edit me-1"></i>if (...) {
+
+                            <!-- Loop Blocks -->
+                            <div class="block-category" data-category="loops">
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='for (int i = 0; i < n; i++) {' data-block-type='for'>
+                                    <i class="fas fa-edit me-1"></i>for (...; ...; ...) {
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='while (i < 10) {' data-block-type='while'>
+                                    <i class="fas fa-edit me-1"></i>while (...) {
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='do {' data-block-type='dowhile'>
+                                    <i class="fas fa-edit me-1"></i>do {
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='} while (i < 10);' data-block-type='whileend'>
+                                    <i class="fas fa-edit me-1"></i>} while (...);
+                                </div>
                             </div>
-                            <div class="code-block editable-block" draggable="true" 
-                                 data-code='for (int i = 0; i < n; i++) {' data-block-type='for'>
-                                <i class="fas fa-edit me-1"></i>for (...; ...; ...) {
+
+                            <!-- Function Blocks -->
+                            <div class="block-category" data-category="functions">
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='int calculate(int x, int y) {' data-block-type='function'>
+                                    <i class="fas fa-edit me-1"></i>function declaration
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='return 0;' data-block-type='return'>
+                                    <i class="fas fa-edit me-1"></i>return ...
+                                </div>
                             </div>
-                            <div class="code-block editable-block" draggable="true" 
-                                 data-code='while (condition) {' data-block-type='while'>
-                                <i class="fas fa-edit me-1"></i>while (...) {
+
+                            <!-- Preprocessor Blocks -->
+                            <div class="block-category" data-category="preprocessor">
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='#include <stdio.h>' data-block-type='include'>
+                                    <i class="fas fa-edit me-1"></i>#include &lt;...&gt;
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='#define MAX_SIZE 100' data-block-type='define'>
+                                    <i class="fas fa-edit me-1"></i>#define ...
+                                </div>
+                            </div>
+
+                            <!-- Miscellaneous Blocks -->
+                            <div class="block-category" data-category="misc">
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='// This is a comment' data-block-type='comment'>
+                                    <i class="fas fa-edit me-1"></i>// comment
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='/* Multi-line comment */' data-block-type='multicomment'>
+                                    <i class="fas fa-edit me-1"></i>/* comment */
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='sizeof(int)' data-block-type='sizeof'>
+                                    <i class="fas fa-edit me-1"></i>sizeof(...)
+                                </div>
+                            </div>
+
+                            <!-- Memory Management Blocks -->
+                            <div class="block-category" data-category="memory">
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='ptr = (int*)malloc(10 * sizeof(int));' data-block-type='malloc'>
+                                    <i class="fas fa-edit me-1"></i>malloc(...)
+                                </div>
+                                <div class="code-block editable-block" draggable="true" 
+                                     data-code='free(ptr);' data-block-type='free'>
+                                    <i class="fas fa-edit me-1"></i>free(...)
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -385,9 +462,51 @@ function retryD3Loading() {
                             <div class="drop-zone" data-line="7"></div>
                             <div class="drop-zone" data-line="8"></div>
                         </div>
-                        <button class="btn btn-secondary mt-3" onclick="clearVisualBlocks()">
-                            <i class="fas fa-trash me-1"></i>Clear All
-                        </button>
+                        <div class="mt-3 d-flex gap-2 flex-wrap">
+                            <button class="btn btn-secondary" onclick="clearVisualBlocks()">
+                                <i class="fas fa-trash me-1"></i>Clear All
+                            </button>
+                            <button class="btn btn-outline-info" onclick="showCodeAnalysis()">
+                                <i class="fas fa-chart-line me-1"></i>Analyze Code
+                            </button>
+                            <button class="btn btn-outline-success" onclick="validateCode()">
+                                <i class="fas fa-check-circle me-1"></i>Validate
+                            </button>
+                            <button class="btn btn-outline-primary" onclick="showSuggestions()">
+                                <i class="fas fa-lightbulb me-1"></i>Get Suggestions
+                            </button>
+                        </div>
+                        
+                        <!-- Code Analysis Panel -->
+                        <div id="code-analysis" class="mt-3" style="display: none;">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Code Analysis</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="text-center">
+                                                <div class="h4 text-primary" id="complexity-score">0</div>
+                                                <small class="text-muted">Complexity</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="text-center">
+                                                <div class="h4 text-info" id="line-count">0</div>
+                                                <small class="text-muted">Lines</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="text-center">
+                                                <span class="badge bg-secondary fs-6" id="difficulty-level">Beginner</span>
+                                                <br><small class="text-muted">Difficulty</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -626,6 +745,55 @@ function generateFromBlocks() {
     document.getElementById('textMode').checked = true;
     document.getElementById('visual-mode-container').style.display = 'none';
     document.getElementById('text-mode-container').style.display = 'block';
+}
+
+function showCodeAnalysis() {
+    const analysis = analyzeCodeComplexity();
+    document.getElementById('complexity-score').textContent = analysis.complexity;
+    document.getElementById('line-count').textContent = analysis.lines;
+    document.getElementById('difficulty-level').textContent = analysis.difficulty;
+    
+    const badge = document.getElementById('difficulty-level');
+    badge.className = 'badge fs-6 ' + 
+        (analysis.difficulty === 'Beginner' ? 'bg-success' : 
+         analysis.difficulty === 'Intermediate' ? 'bg-warning' : 'bg-danger');
+    
+    document.getElementById('code-analysis').style.display = 'block';
+}
+
+function validateCode() {
+    const errors = validateBlockSequence();
+    showValidationErrors(errors);
+    
+    if (errors.length === 0) {
+        showNotification('Code validation passed!', 'success');
+    } else {
+        showNotification(`Found ${errors.length} validation error(s)`, 'warning');
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const alertClass = type === 'success' ? 'alert-success' : 
+                      type === 'warning' ? 'alert-warning' : 
+                      type === 'error' ? 'alert-danger' : 'alert-info';
+    
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    alert.style.top = '20px';
+    alert.style.right = '20px';
+    alert.style.zIndex = '9999';
+    alert.style.minWidth = '300px';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alert);
+
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.parentNode.removeChild(alert);
+        }
+    }, 4000);
 }
 
 // Note: Mode switching listeners are already defined above, avoiding duplicates
