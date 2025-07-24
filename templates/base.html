@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CodeQuest - Learn C Programming{% endblock %}</title>
+    <title>{% block title %}Colunn - Visual Code IDE{% endblock %}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -22,50 +22,41 @@
 <body>
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
+        <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-code me-2"></i>
-                <span class="brand-text">CodeQuest</span>
+                <span class="brand-text">Colunn</span>
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+            <div class="navbar-nav me-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="fileDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-file me-1"></i>File
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" id="new-file"><i class="fas fa-file-plus me-1"></i>New File</a></li>
+                        <li><a class="dropdown-item" href="#" id="open-file"><i class="fas fa-folder-open me-1"></i>Open File</a></li>
+                        <li><a class="dropdown-item" href="#" id="save-file"><i class="fas fa-save me-1"></i>Save</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" id="export-code"><i class="fas fa-download me-1"></i>Export</a></li>
+                    </ul>
+                </div>
+            </div>
             
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}">
-                            <i class="fas fa-home me-1"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('leaderboard') }}">
-                            <i class="fas fa-trophy me-1"></i>Leaderboard
-                        </a>
-                    </li>
-                </ul>
-                
-                <ul class="navbar-nav">
-                    {% if user %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user me-1"></i>{{ user.username }}
-                            <span class="badge bg-primary ms-2">{{ user.total_score }} pts</span>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><span class="dropdown-item-text">Total Score: {{ user.total_score }}</span></li>
-                            <li><span class="dropdown-item-text">Tasks Completed: {{ user.completed_tasks }}</span></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-1"></i>Settings</a></li>
-                        </ul>
-                    </li>
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="fas fa-sign-in-alt me-1"></i>Login</a>
-                    </li>
-                    {% endif %}
-                </ul>
+            <div class="navbar-nav">
+                <div class="nav-item">
+                    <div class="btn-group" role="group" id="mode-switcher">
+                        <input type="radio" class="btn-check" name="viewMode" id="block-mode" value="blocks" checked>
+                        <label class="btn btn-outline-light btn-sm" for="block-mode">
+                            <i class="fas fa-cubes me-1"></i>Blocks
+                        </label>
+
+                        <input type="radio" class="btn-check" name="viewMode" id="text-mode" value="text">
+                        <label class="btn btn-outline-light btn-sm" for="text-mode">
+                            <i class="fas fa-code me-1"></i>Text
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
@@ -74,22 +65,6 @@
     <main class="main-content">
         {% block content %}{% endblock %}
     </main>
-
-    <!-- Footer -->
-    <footer class="footer mt-auto py-3 bg-dark text-light">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <span>&copy; 2025 CodeQuest. Learn C Programming Interactively.</span>
-                </div>
-                <div class="col-md-6 text-end">
-                    <a href="#" class="text-light me-3"><i class="fab fa-github"></i></a>
-                    <a href="#" class="text-light me-3"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="text-light"><i class="fas fa-question-circle"></i> Help</a>
-                </div>
-            </div>
-        </div>
-    </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

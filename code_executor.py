@@ -6,9 +6,9 @@ import os
 import time
 import shutil
 
-def execute_c_code(code):
+def execute_c_code(code, compile_only=False):
     """
-    Compile and execute C code using GCC.
+    Compile and optionally execute C code using GCC.
     Returns real compilation errors and execution results.
     """
     result = {
@@ -22,7 +22,7 @@ def execute_c_code(code):
 
     # Check if GCC is available
     if not shutil.which('gcc'):
-        return execute_c_code_simulation(code)
+        return execute_c_code_simulation(code, compile_only)
 
     try:
         # Create temporary files for source and executable
@@ -47,29 +47,33 @@ def execute_c_code(code):
                 result['error'] = f"Compilation Error:\n{compile_process.stderr}"
                 result['success'] = False
             else:
-                # Compilation successful, now execute
-                try:
-                    # Prepare input for programs that need it
-                    test_input = prepare_test_input(code)
-                    
-                    exec_process = subprocess.run(
-                        [exec_path],
-                        input=test_input,
-                        capture_output=True,
-                        text=True,
-                        timeout=5
-                    )
+                result['success'] = True
+                if compile_only:
+                    result['output'] = 'Compilation successful'
+                else:
+                    # Compilation successful, now execute
+                    try:
+                        # Prepare input for programs that need it
+                        test_input = prepare_test_input(code)
+                        
+                        exec_process = subprocess.run(
+                            [exec_path],
+                            input=test_input,
+                            capture_output=True,
+                            text=True,
+                            timeout=5
+                        )
 
-                    if exec_process.returncode == 0:
-                        result['output'] = exec_process.stdout
-                        result['success'] = True
-                    else:
-                        result['error'] = f"Runtime Error:\n{exec_process.stderr}"
-                        if exec_process.stdout:
+                        if exec_process.returncode == 0:
                             result['output'] = exec_process.stdout
+                            result['success'] = True
+                        else:
+                            result['error'] = f"Runtime Error:\n{exec_process.stderr}"
+                            if exec_process.stdout:
+                                result['output'] = exec_process.stdout
 
-                except subprocess.TimeoutExpired:
-                    result['error'] = "Execution timeout - program took too long to run"
+                    except subprocess.TimeoutExpired:
+                        result['error'] = "Execution timeout - program took too long to run"
 
         finally:
             # Clean up temporary files
@@ -89,6 +93,270 @@ def execute_c_code(code):
     result['execution_time'] = round(time.time() - start_time, 3)
     return result
 
+def execute_cpp_code(code, compile_only=False):
+    """
+    Compile and optionally execute C++ code using g++.
+    """
+    result = {
+        'output': '',
+        'error': '',
+        'execution_time': 0.0,
+        'success': False
+    }
+
+    start_time = time.time()
+
+    # Check if g++ is available
+    if not shutil.which('g++'):
+        result['error'] = 'g++ compiler not found. Please install g++.'
+        result['execution_time'] = round(time.time() - start_time, 3)
+        return result
+
+    try:
+        # Create temporary files for source and executable
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.cpp', delete=False) as source_file:
+            source_file.write(code)
+            source_path = source_file.name
+
+        # Create executable path
+        exec_path = source_path.replace('.cpp', '')
+
+        try:
+            # Compile the C++ code
+            compile_process = subprocess.run(
+                ['g++', '-std=c++17', source_path, '-o', exec_path],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            if compile_process.returncode != 0:
+                # Compilation failed
+                result['error'] = f"Compilation Error:\n{compile_process.stderr}"
+                result['success'] = False
+            else:
+                result['success'] = True
+                if compile_only:
+                    result['output'] = 'Compilation successful'
+                else:
+                    # Execute the compiled code
+                    try:
+                        test_input = prepare_test_input(code)
+                        
+                        exec_process = subprocess.run(
+                            [exec_path],
+                            input=test_input,
+                            capture_output=True,
+                            text=True,
+                            timeout=5
+                        )
+
+                        if exec_process.returncode == 0:
+                            result['output'] = exec_process.stdout
+                            result['success'] = True
+                        else:
+                            result['error'] = f"Runtime Error:\n{exec_process.stderr}"
+                            if exec_process.stdout:
+                                result['output'] = exec_process.stdout
+
+                    except subprocess.TimeoutExpired:
+                        result['error'] = "Execution timeout - program took too long to run"
+
+        finally:
+            # Clean up temporary files
+            try:
+                if os.path.exists(source_path):
+                    os.unlink(source_path)
+                if os.path.exists(exec_path):
+                    os.unlink(exec_path)
+            except OSError:
+                pass
+
+    except subprocess.TimeoutExpired:
+        result['error'] = "Compilation timeout"
+    except Exception as e:
+        result['error'] = f'Execution error: {str(e)}'
+
+    result['execution_time'] = round(time.time() - start_time, 3)
+    return result
+
+def execute_python_code(code, compile_only=False):
+    """
+    Execute Python code (Python doesn't require separate compilation).
+    """
+    result = {
+        'output': '',
+        'error': '',
+        'execution_time': 0.0,
+        'success': False
+    }
+
+    start_time = time.time()
+
+    # Check if Python is available
+    if not shutil.which('python3') and not shutil.which('python'):
+        result['error'] = 'Python interpreter not found. Please install Python.'
+        result['execution_time'] = round(time.time() - start_time, 3)
+        return result
+
+    try:
+        # Create temporary file for source
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as source_file:
+            source_file.write(code)
+            source_path = source_file.name
+
+        try:
+            if compile_only:
+                # For Python, compilation means syntax checking
+                python_cmd = 'python3' if shutil.which('python3') else 'python'
+                compile_process = subprocess.run(
+                    [python_cmd, '-m', 'py_compile', source_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                
+                if compile_process.returncode == 0:
+                    result['success'] = True
+                    result['output'] = 'Syntax check passed'
+                else:
+                    result['error'] = f"Syntax Error:\n{compile_process.stderr}"
+                    result['success'] = False
+            else:
+                # Execute the Python code
+                python_cmd = 'python3' if shutil.which('python3') else 'python'
+                test_input = prepare_test_input(code)
+                
+                exec_process = subprocess.run(
+                    [python_cmd, source_path],
+                    input=test_input,
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+
+                if exec_process.returncode == 0:
+                    result['output'] = exec_process.stdout
+                    result['success'] = True
+                else:
+                    result['error'] = f"Runtime Error:\n{exec_process.stderr}"
+                    if exec_process.stdout:
+                        result['output'] = exec_process.stdout
+
+        finally:
+            # Clean up temporary files
+            try:
+                if os.path.exists(source_path):
+                    os.unlink(source_path)
+                # Remove compiled bytecode file if it exists
+                compiled_path = source_path + 'c'
+                if os.path.exists(compiled_path):
+                    os.unlink(compiled_path)
+            except OSError:
+                pass
+
+    except subprocess.TimeoutExpired:
+        result['error'] = "Execution timeout - program took too long to run"
+    except Exception as e:
+        result['error'] = f'Execution error: {str(e)}'
+
+    result['execution_time'] = round(time.time() - start_time, 3)
+    return result
+
+def execute_java_code(code, compile_only=False):
+    """
+    Compile and optionally execute Java code.
+    """
+    result = {
+        'output': '',
+        'error': '',
+        'execution_time': 0.0,
+        'success': False
+    }
+
+    start_time = time.time()
+
+    # Check if Java is available
+    if not shutil.which('javac') or not shutil.which('java'):
+        result['error'] = 'Java compiler/runtime not found. Please install JDK.'
+        result['execution_time'] = round(time.time() - start_time, 3)
+        return result
+
+    try:
+        # Extract class name from code
+        class_name_match = re.search(r'public\s+class\s+(\w+)', code)
+        if not class_name_match:
+            result['error'] = 'No public class found in Java code'
+            result['execution_time'] = round(time.time() - start_time, 3)
+            return result
+        
+        class_name = class_name_match.group(1)
+        
+        # Create temporary directory and source file
+        temp_dir = tempfile.mkdtemp()
+        source_path = os.path.join(temp_dir, f'{class_name}.java')
+        
+        with open(source_path, 'w') as source_file:
+            source_file.write(code)
+
+        try:
+            # Compile the Java code
+            compile_process = subprocess.run(
+                ['javac', source_path],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                cwd=temp_dir
+            )
+
+            if compile_process.returncode != 0:
+                # Compilation failed
+                result['error'] = f"Compilation Error:\n{compile_process.stderr}"
+                result['success'] = False
+            else:
+                result['success'] = True
+                if compile_only:
+                    result['output'] = 'Compilation successful'
+                else:
+                    # Execute the compiled Java code
+                    try:
+                        test_input = prepare_test_input(code)
+                        
+                        exec_process = subprocess.run(
+                            ['java', class_name],
+                            input=test_input,
+                            capture_output=True,
+                            text=True,
+                            timeout=5,
+                            cwd=temp_dir
+                        )
+
+                        if exec_process.returncode == 0:
+                            result['output'] = exec_process.stdout
+                            result['success'] = True
+                        else:
+                            result['error'] = f"Runtime Error:\n{exec_process.stderr}"
+                            if exec_process.stdout:
+                                result['output'] = exec_process.stdout
+
+                    except subprocess.TimeoutExpired:
+                        result['error'] = "Execution timeout - program took too long to run"
+
+        finally:
+            # Clean up temporary directory
+            try:
+                shutil.rmtree(temp_dir)
+            except OSError:
+                pass
+
+    except subprocess.TimeoutExpired:
+        result['error'] = "Compilation timeout"
+    except Exception as e:
+        result['error'] = f'Execution error: {str(e)}'
+
+    result['execution_time'] = round(time.time() - start_time, 3)
+    return result
+
 def prepare_test_input(code):
     """
     Prepare test input based on the code content.
@@ -96,7 +364,7 @@ def prepare_test_input(code):
     test_input = ""
     
     # Check for scanf patterns and provide appropriate input
-    if 'scanf' in code:
+    if 'scanf' in code or 'input(' in code or 'Scanner' in code:
         if 'name' in code.lower() and 'age' in code.lower():
             test_input = "John\n25\n"
         elif 'num1' in code and 'num2' in code:

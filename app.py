@@ -21,7 +21,8 @@ app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-prod
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Configure the database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///codequest.db")
+database_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'codequest.db')
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", f"sqlite:///{database_path}")
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
@@ -36,16 +37,16 @@ def tojsonfilter(data):
 
 app.jinja_env.filters['tojsonfilter'] = tojsonfilter
 
+# Import models and routes
+import models
+from routes import register_routes
+
+# Register routes
+register_routes(app, db)
+
 with app.app_context():
-    # Import models and routes
-    import models
-    import routes
-    
     # Create all tables
     db.create_all()
-    
-    # Initialize default tasks if they don't exist
-    models.initialize_default_tasks()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
