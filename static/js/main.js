@@ -36,7 +36,7 @@ function initializeIDE() {
         
         // Initialize Visual Blocks
         setTimeout(() => {
-            initializeVisualBlocks();
+            initializeVisualBlocksMain();
             addToConsole('logs', '🧩 Setting up Visual Blocks...');
         }, 600);
         
@@ -156,13 +156,16 @@ function initializeMonacoEditor() {
     }
 }
 
-function initializeVisualBlocks() {
+function initializeVisualBlocksMain() {
     try {
-        // Setup block palette
-        setupBlockPalette();
+        // Call the visual blocks initialization from visual-blocks.js
+        if (typeof renderBlockPalette === 'function') {
+            renderBlockPalette();
+        }
         
-        // Setup drag and drop
-        setupDragAndDrop();
+        if (typeof setupDragAndDrop === 'function') {
+            setupDragAndDrop();
+        }
         
         console.log('✅ Visual blocks initialized');
     } catch (error) {
@@ -522,12 +525,12 @@ function getMonacoLanguage(language) {
     return mapping[language] || 'c';
 }
 
-function setupBlockPalette() {
+function setupBlockPalettePlaceholder() {
     // Placeholder for visual blocks setup
     console.log('Setting up block palette...');
 }
 
-function setupDragAndDrop() {
+function setupDragAndDropPlaceholder() {
     // Placeholder for drag and drop setup
     console.log('Setting up drag and drop...');
 }

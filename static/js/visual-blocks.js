@@ -170,6 +170,12 @@ function addBlockToWorkspace(blockId, block) {
     const workspace = document.getElementById('blocks-workspace');
     if (!workspace) return;
 
+    // Hide empty state if it exists
+    const emptyState = workspace.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
+
     const workspaceBlock = createWorkspaceBlock(blockId, block);
     workspace.appendChild(workspaceBlock);
     
@@ -278,6 +284,16 @@ function removeBlock(blockId) {
         if (window.Colunn) {
             window.Colunn.programBlocks = window.Colunn.programBlocks.filter(b => b.id !== blockId);
         }
+        
+        // Show empty state if no blocks remain
+        const workspace = document.getElementById('blocks-workspace');
+        const remainingBlocks = workspace.querySelectorAll('.workspace-block');
+        if (remainingBlocks.length === 0) {
+            const emptyState = workspace.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.style.display = 'block';
+            }
+        }
     }
 }
 
@@ -325,7 +341,15 @@ function convertBlocksToCode() {
 function clearVisualBlocks() {
     const workspace = document.getElementById('blocks-workspace');
     if (workspace) {
-        workspace.innerHTML = '';
+        // Remove all workspace blocks but keep the empty state
+        const workspaceBlocks = workspace.querySelectorAll('.workspace-block');
+        workspaceBlocks.forEach(block => block.remove());
+        
+        // Show empty state
+        const emptyState = workspace.querySelector('.empty-state');
+        if (emptyState) {
+            emptyState.style.display = 'block';
+        }
     }
     
     if (window.Colunn) {
